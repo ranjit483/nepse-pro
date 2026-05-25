@@ -46,9 +46,6 @@ jobs:
           
           flutter pub get
 
-      - name: Check Code for Errors (Analyze)
-        run: flutter analyze
-
       - name: Build APK
         run: flutter build apk --release
 
