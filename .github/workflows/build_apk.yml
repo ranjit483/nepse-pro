@@ -41,6 +41,9 @@ jobs:
           mv pubspec.yaml.bak pubspec.yaml
           mv lib/main.dart.bak lib/main.dart
           
+          # Delete the auto-generated test folder which references 'MyApp'
+          rm -rf test/
+          
           flutter pub get
 
       - name: Check Code for Errors (Analyze)

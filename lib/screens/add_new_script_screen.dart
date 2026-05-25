@@ -201,7 +201,7 @@ class _AddNewScriptScreenState extends State<AddNewScriptScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.monitoring, color: AppTheme.primary),
+                              const Icon(Icons.analytics, color: AppTheme.primary),
                               const SizedBox(width: 8),
                               Text('Investment Summary', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.onSurfaceVariant)),
                             ],
