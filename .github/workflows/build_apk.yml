@@ -29,7 +29,11 @@ jobs:
           cache: true
 
       - name: Install Dependencies
-        run: flutter pub get
+        run: |
+          flutter create --project-name nepse_pro --platforms=android temp_app
+          mv temp_app/android ./android
+          rm -rf temp_app
+          flutter pub get
 
       - name: Build APK
         run: flutter build apk --release
