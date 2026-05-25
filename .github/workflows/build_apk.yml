@@ -28,12 +28,23 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install Dependencies
+      - name: Initialize Flutter Project
         run: |
-          flutter create --project-name nepse_pro --platforms=android temp_app
-          mv temp_app/android ./android
-          rm -rf temp_app
+          # Backup our custom code
+          cp pubspec.yaml pubspec.yaml.bak
+          cp lib/main.dart lib/main.dart.bak
+          
+          # Force create the project to generate all missing config files (.metadata, android/, etc.)
+          flutter create --project-name nepse_pro --platforms=android .
+          
+          # Restore our custom code
+          mv pubspec.yaml.bak pubspec.yaml
+          mv lib/main.dart.bak lib/main.dart
+          
           flutter pub get
+
+      - name: Check Code for Errors (Analyze)
+        run: flutter analyze
 
       - name: Build APK
         run: flutter build apk --release
