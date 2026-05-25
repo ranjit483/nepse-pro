@@ -44,6 +44,9 @@ jobs:
           # Delete the auto-generated test folder which references 'MyApp'
           rm -rf test/
           
+          # Inject INTERNET permission into AndroidManifest.xml for release mode
+          sed -i 's/<application/<uses-permission android:name="android.permission.INTERNET"\/>\n    <application/' android/app/src/main/AndroidManifest.xml
+          
           flutter pub get
 
       - name: Build APK
