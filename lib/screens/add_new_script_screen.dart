@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../theme.dart';
-
+import '../main.dart'; // For supabase instance
 class AddNewScriptScreen extends StatefulWidget {
   const AddNewScriptScreen({super.key});
 
@@ -14,6 +14,56 @@ class _AddNewScriptScreenState extends State<AddNewScriptScreen> {
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
+  bool _isLoading = false;
+
+  Future<void> _saveToPortfolio() async {
+    final symbol = _symbolController.text.trim().toUpperCase();
+    final price = double.tryParse(_priceController.text) ?? 0.0;
+    final qty = int.tryParse(_quantityController.text) ?? 0;
+
+    if (symbol.isEmpty || price <= 0 || qty <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill out all fields correctly.'), backgroundColor: AppTheme.error),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      await supabase.from('portfolio').insert({
+        'user_id': user.id,
+        'symbol': symbol,
+        'purchase_price': price,
+        'quantity': qty,
+        'purchase_date': _selectedDate.toIso8601String().split('T')[0],
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Successfully added to portfolio!'), backgroundColor: AppTheme.primary),
+        );
+        Navigator.pop(context, true); // true to indicate success
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving script: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   double get _totalInvestment {
     final price = double.tryParse(_priceController.text) ?? 0.0;
@@ -242,10 +292,7 @@ class _AddNewScriptScreenState extends State<AddNewScriptScreen> {
                 border: Border(top: BorderSide(color: AppTheme.outlineVariant.withOpacity(0.2))),
               ),
               child: ElevatedButton(
-                onPressed: () {
-                  // TODO: Handle saving script to Supabase DB here
-                  Navigator.pop(context);
-                },
+                onPressed: _isLoading ? null : _saveToPortfolio,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryContainer,
                   foregroundColor: AppTheme.onPrimaryContainer,
@@ -255,14 +302,16 @@ class _AddNewScriptScreenState extends State<AddNewScriptScreen> {
                   ),
                   elevation: 2,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.add_circle_outline),
-                    const SizedBox(width: 8),
-                    Text('Add to Portfolio', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.onPrimaryContainer)),
-                  ],
-                ),
+                child: _isLoading 
+                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.add_circle_outline),
+                          const SizedBox(width: 8),
+                          Text('Add to Portfolio', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.onPrimaryContainer)),
+                        ],
+                      ),
               ),
             ),
           ],

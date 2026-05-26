@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'auth_screen.dart';
+import 'legal_screen.dart';
 import '../theme.dart';
 
 class OnboardingScreen extends StatelessWidget {
@@ -121,24 +123,40 @@ class OnboardingScreen extends StatelessWidget {
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: AppTheme.onSurfaceVariant,
                       ),
-                  children: const [
-                    TextSpan(text: 'By continuing, you agree to our '),
+                  children: [
+                    const TextSpan(text: 'By continuing, you agree to our '),
                     TextSpan(
                       text: 'Terms of Service',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppTheme.primary,
                         decoration: TextDecoration.underline,
                       ),
+                      recognizer: TapGestureRecognizer()..onTap = () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LegalScreen(title: 'Terms of Service'),
+                          ),
+                        );
+                      },
                     ),
-                    TextSpan(text: ' and '),
+                    const TextSpan(text: ' and '),
                     TextSpan(
                       text: 'Privacy Policy',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppTheme.primary,
                         decoration: TextDecoration.underline,
                       ),
+                      recognizer: TapGestureRecognizer()..onTap = () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LegalScreen(title: 'Privacy Policy'),
+                          ),
+                        );
+                      },
                     ),
-                    TextSpan(text: '.'),
+                    const TextSpan(text: '.'),
                   ],
                 ),
               ),
