@@ -54,8 +54,8 @@ class _AuthScreenState extends State<AuthScreen> {
         }
       }
       // Note: The AuthWrapper in main.dart handles navigation upon successful auth state change.
-      if (mounted && _isLogin) {
-        Navigator.of(context).pop(); // Pops back to trigger auth wrapper update if it didn't automatically
+      if (mounted && supabase.auth.currentUser != null) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } on AuthException catch (e) {
       if (mounted) {

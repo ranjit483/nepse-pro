@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme.dart';
 import 'screens/onboarding_screen.dart';
@@ -43,21 +44,22 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
+  late StreamSubscription<AuthState> _authStateSubscription;
+
   @override
   void initState() {
     super.initState();
-    supabase.auth.onAuthStateChange.listen((data) {
-      final AuthChangeEvent event = data.event;
-      if (event == AuthChangeEvent.signedIn) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
-      } else if (event == AuthChangeEvent.signedOut) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-        );
+    _authStateSubscription = supabase.auth.onAuthStateChange.listen((data) {
+      if (mounted) {
+        setState(() {});
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _authStateSubscription.cancel();
+    super.dispose();
   }
 
   @override
