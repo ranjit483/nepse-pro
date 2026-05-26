@@ -8,7 +8,7 @@ import 'screens/dashboard_screen.dart';
 
 // IMPORTANT: Replace these with your actual Supabase URL and Anon Key
 const supabaseUrl = 'https://tcejglrvmvvnevajbivw.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjZWpnbHJ2bXZ2bmV2YWpiaXZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTY1NzYsImV4cCI6MjA5NTI5MjU3Nn0.HD5dKArcDBcAoet0Sy-M_IMg-AobYjeIaYsRX5CHveA';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlla2Nvanpva2ZvY3Njd2txcGRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2Mzc0MTQsImV4cCI6MjA5NTIxMzQxNH0.cE842G6sLE2XxRuwPvSu30FS-O2z0ED3a9KjQkLAhF0';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
