@@ -163,7 +163,7 @@ class _DashboardTab extends StatelessWidget {
                               final total = price * qty;
                               return ListTile(
                                 leading: CircleAvatar(
-                                  backgroundColor: AppTheme.surfaceContainerHighest,
+                                  backgroundColor: AppTheme.surfaceContainerHigh,
                                   child: Text(item['symbol'].toString().substring(0, 1), style: const TextStyle(color: AppTheme.primary)),
                                 ),
                                 title: Text(item['symbol'], style: const TextStyle(fontWeight: FontWeight.bold)),
