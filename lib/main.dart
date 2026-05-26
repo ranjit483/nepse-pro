@@ -7,7 +7,7 @@ import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
 
 // IMPORTANT: Replace these with your actual Supabase URL and Anon Key
-const supabaseUrl = 'https://tcejglrvmvvnevajbivw.supabase.co';
+const supabaseUrl = 'https://yekcojzokfocscwkqpdi.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlla2Nvanpva2ZvY3Njd2txcGRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2Mzc0MTQsImV4cCI6MjA5NTIxMzQxNH0.cE842G6sLE2XxRuwPvSu30FS-O2z0ED3a9KjQkLAhF0';
 
 void main() async {
