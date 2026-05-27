@@ -262,67 +262,234 @@ class _MarketStatsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Market Overview', style: Theme.of(context).textTheme.headlineMedium),
+          Text('Market Stats & Insights', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
+          const SizedBox(height: 8),
+          Text('Real-time technical analysis and institutional flow.', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
           const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceContainerLowest,
-              border: Border.all(color: AppTheme.outlineVariant),
-              borderRadius: BorderRadius.circular(12),
-            ),
+          
+          // Technicals Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('NEPSE Index Technicals', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text('Live', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Technicals Cards
+          Row(
+            children: [
+              Expanded(
+                child: _buildTechnicalCard(
+                  context,
+                  title: 'RSI (14)',
+                  value: '68.4',
+                  subtitle: 'Approaching Overbought',
+                  subtitleColor: AppTheme.primary,
+                  icon: Icons.show_chart,
+                  isPositive: true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildTechnicalCard(
+                  context,
+                  title: 'MACD',
+                  value: '+12.5',
+                  subtitle: 'Bullish Crossover',
+                  subtitleColor: AppTheme.primary,
+                  icon: Icons.stacked_line_chart,
+                  isPositive: true,
+                  isUpArrow: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          
+          // Whale Tracker Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.track_changes, color: AppTheme.primary),
+                  const SizedBox(width: 8),
+                  Text('Whale Tracker', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              TextButton.icon(
+                onPressed: () {},
+                icon: const Text('Filter', style: TextStyle(color: AppTheme.onSurfaceVariant)),
+                label: const Icon(Icons.filter_list, size: 18, color: AppTheme.onSurfaceVariant),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Whale Tracker List
+          _buildWhaleTrackerItem(
+            context,
+            type: 'HUGE BUY',
+            symbol: 'NABIL',
+            qty: '50,000',
+            price: '610',
+            tag1: 'Institutional',
+            vol: '30.5M',
+            time: 'Just now',
+            isBuy: true,
+          ),
+          _buildWhaleTrackerItem(
+            context,
+            type: 'BLOCK SELL',
+            symbol: 'NICA',
+            qty: '120,000',
+            price: '745',
+            tag1: 'Off-market',
+            tag1Color: Colors.red.shade100,
+            tag1TextColor: Colors.red.shade800,
+            vol: '89.4M',
+            time: '5m ago',
+            isBuy: false,
+          ),
+          _buildWhaleTrackerItem(
+            context,
+            type: 'ACCUMULATION',
+            symbol: 'SHIVM',
+            qty: '25,000',
+            price: '420',
+            tag1: 'Broker 45',
+            vol: '10.5M',
+            time: '12m ago',
+            isBuy: true,
+          ),
+          _buildWhaleTrackerItem(
+            context,
+            type: 'LARGE BUY',
+            symbol: 'GBIME',
+            qty: '30,000',
+            price: '185',
+            tag1: 'Institutional',
+            vol: '5.5M',
+            time: '28m ago',
+            isBuy: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTechnicalCard(BuildContext context, {required String title, required String value, required String subtitle, required Color subtitleColor, required IconData icon, required bool isPositive, bool isUpArrow = false}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant)),
+              Icon(icon, size: 16, color: Colors.grey.shade400),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(value, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: isPositive ? AppTheme.primary : AppTheme.error)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              if (isUpArrow) const Icon(Icons.arrow_upward, size: 12, color: AppTheme.primary) else Container(width: 6, height: 6, decoration: BoxDecoration(shape: BoxShape.circle, color: subtitleColor)),
+              const SizedBox(width: 4),
+              Expanded(child: Text(subtitle, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: subtitleColor), maxLines: 1, overflow: TextOverflow.ellipsis)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWhaleTrackerItem(BuildContext context, {required String type, required String symbol, required String qty, required String price, required String tag1, Color? tag1Color, Color? tag1TextColor, required String vol, required String time, required bool isBuy}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            backgroundColor: isBuy ? Colors.green.shade50 : Colors.red.shade50,
+            child: Icon(isBuy ? Icons.arrow_downward : Icons.arrow_upward, color: isBuy ? AppTheme.primary : Colors.red, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('NEPSE Index', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                    Row(
-                      children: [
-                        const Icon(Icons.arrow_upward, color: Colors.green, size: 16),
-                        Text(' 2,145.32', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.green, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
+                    Text('$type: $symbol', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(time, style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w600)),
                   ],
                 ),
-                const SizedBox(height: 8),
-                const Divider(),
+                const SizedBox(height: 4),
+                RichText(
+                  text: TextSpan(
+                    style: const TextStyle(color: AppTheme.onSurface, fontSize: 13),
+                    children: [
+                      TextSpan(text: '$qty units ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const TextSpan(text: 'at '),
+                      TextSpan(text: 'Rs. $price', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text('Turnover', style: TextStyle(color: AppTheme.onSurfaceVariant)),
-                    Text('NPR 4.2B', style: TextStyle(fontWeight: FontWeight.bold)),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: tag1Color ?? Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(tag1, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tag1TextColor ?? AppTheme.primary)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('Vol: Rs. $vol', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
                   ],
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 24),
-          Text('Top Gainers', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          ListTile(
-            leading: const CircleAvatar(backgroundColor: Colors.green, child: Icon(Icons.trending_up, color: Colors.white)),
-            title: const Text('NABIL'),
-            trailing: const Text('+4.2%', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-            tileColor: AppTheme.surfaceContainerLowest,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-          const SizedBox(height: 8),
-          ListTile(
-            leading: const CircleAvatar(backgroundColor: Colors.green, child: Icon(Icons.trending_up, color: Colors.white)),
-            title: const Text('NTC'),
-            trailing: const Text('+2.1%', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-            tileColor: AppTheme.surfaceContainerLowest,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         ],
       ),
     );
   }
 }
+
