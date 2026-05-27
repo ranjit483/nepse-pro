@@ -16,6 +16,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
   late bool _isLogin;
 
   @override
@@ -122,8 +123,19 @@ class _AuthScreenState extends State<AuthScreen> {
                     borderRadius: BorderRadius.circular(8.0),
                     borderSide: const BorderSide(color: AppTheme.primary),
                   ),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      color: AppTheme.outline,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                  ),
                 ),
-                obscureText: true,
+                obscureText: !_isPasswordVisible,
               ),
               const SizedBox(height: 32),
               ElevatedButton(

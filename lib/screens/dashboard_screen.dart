@@ -13,6 +13,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
+  Key _refreshKey = UniqueKey();
 
   Future<void> _logout() async {
     await supabase.auth.signOut();
@@ -37,6 +38,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: IndexedStack(
+        key: _refreshKey,
         index: _currentIndex,
         children: [
           const _DashboardTab(),
@@ -51,7 +53,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             MaterialPageRoute(builder: (context) => const AddNewScriptScreen()),
           );
           if (result == true) {
-            // StreamBuilder will automatically update
+            setState(() {
+              _refreshKey = UniqueKey();
+            });
           }
         },
         backgroundColor: AppTheme.primaryContainer,
@@ -88,171 +92,237 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class _DashboardTab extends StatelessWidget {
+class _DashboardTab extends StatefulWidget {
   const _DashboardTab();
+
+  @override
+  State<_DashboardTab> createState() => _DashboardTabState();
+}
+
+class _DashboardTabState extends State<_DashboardTab> {
+  late Future<List<Map<String, dynamic>>> _portfolioFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPortfolio();
+  }
+
+  void _fetchPortfolio() {
+    _portfolioFuture = supabase.from('portfolio').select().order('created_at', ascending: false);
+  }
+
+  Future<void> _handleRefresh() async {
+    setState(() {
+      _fetchPortfolio();
+    });
+    await _portfolioFuture;
+  }
 
   @override
   Widget build(BuildContext context) {
     final NumberFormat currencyFormat = NumberFormat('#,##0.00', 'en_US');
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Welcome back!', style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 24),
-          Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: supabase.from('portfolio').stream(primaryKey: ['id']),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
-                }
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      color: AppTheme.primary,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Welcome back!', style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 24),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _portfolioFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
+                  }
 
-                final data = snapshot.data ?? [];
-                
-                double totalInvestment = 0;
-                for (var row in data) {
-                  final price = (row['purchase_price'] as num).toDouble();
-                  final qty = (row['quantity'] as num).toInt();
-                  totalInvestment += (price * qty);
-                }
+                  final data = snapshot.data ?? [];
+                  
+                  double totalInvestment = 0;
+                  for (var row in data) {
+                    final price = (row['purchase_price'] as num).toDouble();
+                    final qty = (row['quantity'] as num).toInt();
+                    totalInvestment += (price * qty);
+                  }
 
-                return Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Total Investment', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.onPrimaryContainer.withOpacity(0.8))),
-                              const SizedBox(height: 8),
-                              Text(
-                                'NPR ${currencyFormat.format(totalInvestment)}',
-                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: AppTheme.onPrimaryContainer, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          const Icon(Icons.account_balance_wallet, size: 48, color: AppTheme.onPrimaryContainer),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Expanded(
-                      child: data.isEmpty 
-                        ? Center(
-                            child: Text('No scripts added yet. Click + to add.', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.onSurfaceVariant)),
-                          )
-                        : ListView.builder(
-                            itemCount: data.length,
-                            itemBuilder: (context, index) {
-                              final item = data[index];
-                              final price = (item['purchase_price'] as num).toDouble();
-                              final qty = (item['quantity'] as num).toInt();
-                              final total = price * qty;
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: AppTheme.surfaceContainerHigh,
-                                  child: Text(item['symbol'].toString().substring(0, 1), style: const TextStyle(color: AppTheme.primary)),
+                  return Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Total Investment', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.onPrimaryContainer.withOpacity(0.8))),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'NPR ${currencyFormat.format(totalInvestment)}',
+                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: AppTheme.onPrimaryContainer, fontWeight: FontWeight.bold),
                                 ),
-                                title: Text(item['symbol'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text('$qty Units @ NPR ${currencyFormat.format(price)}'),
-                                trailing: Text('NPR ${currencyFormat.format(total)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              );
-                            },
-                          ),
-                    ),
-                  ],
-                );
-              },
+                              ],
+                            ),
+                            const Icon(Icons.account_balance_wallet, size: 48, color: AppTheme.onPrimaryContainer),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Expanded(
+                        child: data.isEmpty 
+                          ? Center(
+                              child: Text('No scripts added yet. Click + to add.', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.onSurfaceVariant)),
+                            )
+                          : ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              itemCount: data.length,
+                              itemBuilder: (context, index) {
+                                final item = data[index];
+                                final price = (item['purchase_price'] as num).toDouble();
+                                final qty = (item['quantity'] as num).toInt();
+                                final total = price * qty;
+                                return ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: AppTheme.surfaceContainerHigh,
+                                    child: Text(item['symbol'].toString().substring(0, 1), style: const TextStyle(color: AppTheme.primary)),
+                                  ),
+                                  title: Text(item['symbol'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  subtitle: Text('$qty Units @ NPR ${currencyFormat.format(price)}'),
+                                  trailing: Text('NPR ${currencyFormat.format(total)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                );
+                              },
+                            ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _PortfolioTab extends StatelessWidget {
+class _PortfolioTab extends StatefulWidget {
   const _PortfolioTab();
+
+  @override
+  State<_PortfolioTab> createState() => _PortfolioTabState();
+}
+
+class _PortfolioTabState extends State<_PortfolioTab> {
+  late Future<List<Map<String, dynamic>>> _portfolioFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPortfolio();
+  }
+
+  void _fetchPortfolio() {
+    _portfolioFuture = supabase.from('portfolio').select().order('created_at', ascending: false);
+  }
+
+  Future<void> _handleRefresh() async {
+    setState(() {
+      _fetchPortfolio();
+    });
+    await _portfolioFuture;
+  }
 
   @override
   Widget build(BuildContext context) {
     final NumberFormat currencyFormat = NumberFormat('#,##0.00', 'en_US');
     
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: supabase.from('portfolio').stream(primaryKey: ['id']),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
-        }
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      color: AppTheme.primary,
+      child: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _portfolioFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
+          }
 
-        final data = snapshot.data ?? [];
+          final data = snapshot.data ?? [];
 
-        if (data.isEmpty) {
-          return Center(
-            child: Text('Your portfolio is empty.', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.onSurfaceVariant)),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: data.length,
-          itemBuilder: (context, index) {
-            final item = data[index];
-            final price = (item['purchase_price'] as num).toDouble();
-            final qty = (item['quantity'] as num).toInt();
-            final date = item['purchase_date'].toString();
-            
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              color: AppTheme.surfaceContainerLowest,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: AppTheme.outlineVariant),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(item['symbol'], style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.primary, fontWeight: FontWeight.bold)),
-                        Text('NPR ${currencyFormat.format(price * qty)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('$qty Units @ NPR $price', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
-                        Text(date, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.onSurfaceVariant)),
-                      ],
-                    ),
-                  ],
+          if (data.isEmpty) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.6,
+                  child: Center(
+                    child: Text('Your portfolio is empty.', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.onSurfaceVariant)),
+                  ),
                 ),
-              ),
+              ],
             );
-          },
-        );
-      },
+          }
+
+          return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            itemCount: data.length,
+            itemBuilder: (context, index) {
+              final item = data[index];
+              final price = (item['purchase_price'] as num).toDouble();
+              final qty = (item['quantity'] as num).toInt();
+              final date = item['purchase_date'].toString();
+              
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                color: AppTheme.surfaceContainerLowest,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppTheme.outlineVariant),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(item['symbol'], style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                          Text('NPR ${currencyFormat.format(price * qty)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('$qty Units @ NPR $price', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
+                          Text(date, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.onSurfaceVariant)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
