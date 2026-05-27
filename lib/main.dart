@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme.dart';
 import 'screens/onboarding_screen.dart';
-import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
 
 // IMPORTANT: Replace these with your actual Supabase URL and Anon Key
