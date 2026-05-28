@@ -6,6 +6,7 @@ import 'add_new_script_screen.dart';
 import '../mock_data.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'watchlist_screen.dart';
+import 'tools_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -48,6 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const _PortfolioTab(),
           const WatchlistScreen(),
           const _MarketStatsTab(),
+          const ToolsScreen(),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -94,6 +96,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: Icon(Icons.insights_outlined),
             selectedIcon: Icon(Icons.insights),
             label: 'Market Stats',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calculate_outlined),
+            selectedIcon: Icon(Icons.calculate),
+            label: 'Tools',
           ),
         ],
       ),
