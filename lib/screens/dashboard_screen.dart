@@ -3,6 +3,9 @@ import 'package:intl/intl.dart';
 import '../theme.dart';
 import '../main.dart'; // for supabase instance
 import 'add_new_script_screen.dart';
+import '../mock_data.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'watchlist_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -43,6 +46,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           const _DashboardTab(),
           const _PortfolioTab(),
+          const WatchlistScreen(),
           const _MarketStatsTab(),
         ],
       ),
@@ -80,6 +84,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: Icon(Icons.account_balance_wallet_outlined),
             selectedIcon: Icon(Icons.account_balance_wallet),
             label: 'Portfolio',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.list_alt_outlined),
+            selectedIcon: Icon(Icons.list_alt),
+            label: 'Watchlist',
           ),
           NavigationDestination(
             icon: Icon(Icons.insights_outlined),
@@ -144,69 +153,160 @@ class _DashboardTabState extends State<_DashboardTab> {
                     return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
                   }
 
-                  final data = snapshot.data ?? [];
-                  
-                  double totalInvestment = 0;
-                  for (var row in data) {
-                    final price = (row['purchase_price'] as num).toDouble();
-                    final qty = (row['quantity'] as num).toInt();
-                    totalInvestment += (price * qty);
-                  }
+          // Group by symbol
+          Map<String, Map<String, dynamic>> groupedData = {};
+          double totalInvested = 0;
+          double currentPortfolioValue = 0;
+          double todaysChangeRs = 0;
 
-                  return Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(16),
+          for (var row in data) {
+            final symbol = row['symbol'];
+            final price = (row['purchase_price'] as num).toDouble();
+            final qty = (row['quantity'] as num).toInt();
+            
+            if (groupedData.containsKey(symbol)) {
+              final prevQty = groupedData[symbol]!['quantity'] as int;
+              final prevTotal = groupedData[symbol]!['total_invested'] as double;
+              groupedData[symbol]!['quantity'] = prevQty + qty;
+              groupedData[symbol]!['total_invested'] = prevTotal + (price * qty);
+              groupedData[symbol]!['avg_price'] = groupedData[symbol]!['total_invested'] / groupedData[symbol]!['quantity'];
+            } else {
+              groupedData[symbol] = {
+                'symbol': symbol,
+                'quantity': qty,
+                'total_invested': price * qty,
+                'avg_price': price,
+              };
+            }
+          }
+
+          List<Widget> liveItems = [];
+
+          groupedData.forEach((symbol, info) {
+            final qty = info['quantity'] as int;
+            final invested = info['total_invested'] as double;
+            totalInvested += invested;
+
+            final liveData = MockData.getLivePrice(symbol);
+            final livePrice = liveData['price'] as double;
+            final changeRs = liveData['change_rs'] as double;
+            final changePct = liveData['change'] as double;
+
+            final currentValue = livePrice * qty;
+            currentPortfolioValue += currentValue;
+            todaysChangeRs += (changeRs * qty);
+
+            final totalGain = currentValue - invested;
+            final totalGainPct = (totalGain / invested) * 100;
+            final isPositive = totalGain >= 0;
+
+            liveItems.add(
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.5)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(symbol, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('$qty Units', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('LTP: Rs. $livePrice', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Text('${changeRs > 0 ? '+' : ''}$changeRs (${changePct > 0 ? '+' : ''}$changePct%)', style: TextStyle(color: changeRs >= 0 ? AppTheme.primary : AppTheme.error, fontSize: 12, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(isPositive ? '+ Rs. ${currencyFormat.format(totalGain)}' : '- Rs. ${currencyFormat.format(totalGain.abs())}', style: TextStyle(color: isPositive ? AppTheme.primary : AppTheme.error, fontWeight: FontWeight.bold)),
+                          Text('${isPositive ? '+' : ''}${totalGainPct.toStringAsFixed(2)}%', style: TextStyle(color: isPositive ? AppTheme.primary : AppTheme.error, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            );
+          });
+
+          final overallGain = currentPortfolioValue - totalInvested;
+          final isTodayPositive = todaysChangeRs >= 0;
+
+          return Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Current Balance', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.onPrimaryContainer.withOpacity(0.8))),
+                        const SizedBox(height: 4),
+                        Text(
+                          'NPR ${currencyFormat.format(currentPortfolioValue)}',
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: AppTheme.onPrimaryContainer, fontWeight: FontWeight.bold),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        const SizedBox(height: 8),
+                        Row(
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Total Investment', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.onPrimaryContainer.withOpacity(0.8))),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'NPR ${currencyFormat.format(totalInvestment)}',
-                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: AppTheme.onPrimaryContainer, fontWeight: FontWeight.bold),
-                                ),
-                              ],
+                            Text('Today: ', style: TextStyle(color: AppTheme.onPrimaryContainer.withOpacity(0.8))),
+                            Text(
+                              '${isTodayPositive ? '+' : '-'} NPR ${currencyFormat.format(todaysChangeRs.abs())}',
+                              style: TextStyle(color: AppTheme.onPrimaryContainer, fontWeight: FontWeight.bold),
                             ),
-                            const Icon(Icons.account_balance_wallet, size: 48, color: AppTheme.onPrimaryContainer),
                           ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Expanded(
-                        child: data.isEmpty 
-                          ? Center(
-                              child: Text('No scripts added yet. Click + to add.', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.onSurfaceVariant)),
-                            )
-                          : ListView.builder(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              itemCount: data.length,
-                              itemBuilder: (context, index) {
-                                final item = data[index];
-                                final price = (item['purchase_price'] as num).toDouble();
-                                final qty = (item['quantity'] as num).toInt();
-                                final total = price * qty;
-                                return ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: AppTheme.surfaceContainerHigh,
-                                    child: Text(item['symbol'].toString().substring(0, 1), style: const TextStyle(color: AppTheme.primary)),
-                                  ),
-                                  title: Text(item['symbol'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  subtitle: Text('$qty Units @ NPR ${currencyFormat.format(price)}'),
-                                  trailing: Text('NPR ${currencyFormat.format(total)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                );
-                              },
-                            ),
-                      ),
-                    ],
-                  );
+                        )
+                      ],
+                    ),
+                    const Icon(Icons.show_chart, size: 48, color: AppTheme.onPrimaryContainer),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Live P&L', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                  Text('Today\'s Change', style: TextStyle(color: Colors.grey.shade600)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: data.isEmpty 
+                  ? Center(
+                      child: Text('No scripts added yet. Click + to add.', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.onSurfaceVariant)),
+                    )
+                  : ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: liveItems,
+                    ),
+              ),
+            ],
+          );
                 },
               ),
             ),
@@ -244,6 +344,16 @@ class _PortfolioTabState extends State<_PortfolioTab> {
     await _portfolioFuture;
   }
 
+  Future<void> _deleteSymbol(String symbol) async {
+    try {
+      await supabase.from('portfolio').delete().eq('symbol', symbol);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$symbol deleted from portfolio')));
+      _handleRefresh();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete: $e'), backgroundColor: AppTheme.error));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final NumberFormat currencyFormat = NumberFormat('#,##0.00', 'en_US');
@@ -277,49 +387,189 @@ class _PortfolioTabState extends State<_PortfolioTab> {
             );
           }
 
-          return ListView.builder(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            itemCount: data.length,
-            itemBuilder: (context, index) {
-              final item = data[index];
-              final price = (item['purchase_price'] as num).toDouble();
-              final qty = (item['quantity'] as num).toInt();
-              final date = item['purchase_date'].toString();
-              
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                color: AppTheme.surfaceContainerLowest,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: AppTheme.outlineVariant),
+          // Group by symbol
+          Map<String, Map<String, dynamic>> groupedData = {};
+          double totalInvested = 0;
+          double currentPortfolioValue = 0;
+
+          for (var row in data) {
+            final symbol = row['symbol'];
+            final price = (row['purchase_price'] as num).toDouble();
+            final qty = (row['quantity'] as num).toInt();
+            
+            if (groupedData.containsKey(symbol)) {
+              final prevQty = groupedData[symbol]!['quantity'] as int;
+              final prevTotal = groupedData[symbol]!['total_invested'] as double;
+              groupedData[symbol]!['quantity'] = prevQty + qty;
+              groupedData[symbol]!['total_invested'] = prevTotal + (price * qty);
+              groupedData[symbol]!['avg_price'] = groupedData[symbol]!['total_invested'] / groupedData[symbol]!['quantity'];
+            } else {
+              groupedData[symbol] = {
+                'symbol': symbol,
+                'quantity': qty,
+                'total_invested': price * qty,
+                'avg_price': price,
+              };
+            }
+          }
+
+          List<PieChartSectionData> pieSections = [];
+          final colors = [AppTheme.primary, AppTheme.secondary, Colors.orange, Colors.purple, Colors.teal, Colors.indigo];
+          int colorIndex = 0;
+
+          List<Widget> listItems = [];
+          
+          groupedData.forEach((symbol, info) {
+            final qty = info['quantity'] as int;
+            final avgPrice = info['avg_price'] as double;
+            final invested = info['total_invested'] as double;
+            totalInvested += invested;
+
+            final liveData = MockData.getLivePrice(symbol);
+            final livePrice = liveData['price'] as double;
+            final changeRs = liveData['change_rs'] as double;
+            final changePct = liveData['change'] as double;
+
+            final currentValue = livePrice * qty;
+            currentPortfolioValue += currentValue;
+            
+            final totalGain = currentValue - invested;
+            final totalGainPct = (totalGain / invested) * 100;
+            final isPositive = totalGain >= 0;
+
+            pieSections.add(PieChartSectionData(
+              color: colors[colorIndex % colors.length],
+              value: currentValue,
+              title: symbol,
+              radius: 50,
+              titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+            ));
+            colorIndex++;
+
+            listItems.add(
+              Dismissible(
+                key: Key(symbol),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  color: Colors.red,
+                  child: const Icon(Icons.delete, color: Colors.white),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(item['symbol'], style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.primary, fontWeight: FontWeight.bold)),
-                          Text('NPR ${currencyFormat.format(price * qty)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('$qty Units @ NPR $price', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
-                          Text(date, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.onSurfaceVariant)),
-                        ],
-                      ),
-                    ],
+                onDismissed: (direction) {
+                  _deleteSymbol(symbol);
+                },
+                child: Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  color: AppTheme.surfaceContainerLowest,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppTheme.outlineVariant),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(symbol, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                            Text('NPR ${currencyFormat.format(currentValue)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('$qty Units | Avg: NPR ${currencyFormat.format(avgPrice)}', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
+                            Row(
+                              children: [
+                                Icon(isPositive ? Icons.arrow_upward : Icons.arrow_downward, size: 14, color: isPositive ? AppTheme.primary : AppTheme.error),
+                                Text(
+                                  ' ${currencyFormat.format(totalGain.abs())} (${totalGainPct.toStringAsFixed(2)}%)',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: isPositive ? AppTheme.primary : AppTheme.error, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('LTP: Rs. $livePrice', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
+                            Text('Today: ${changeRs > 0 ? '+' : ''}$changeRs (${changePct > 0 ? '+' : ''}$changePct%)', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: changeRs >= 0 ? AppTheme.primary : AppTheme.error)),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              );
-            },
+              )
+            );
+          });
+          
+          final overallGain = currentPortfolioValue - totalInvested;
+          final overallGainPct = totalInvested > 0 ? (overallGain / totalInvested) * 100 : 0;
+          final isOverallPositive = overallGain >= 0;
+
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            children: [
+              // Portfolio Summary Card
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Text('Current Value', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
+                    const SizedBox(height: 4),
+                    Text('NPR ${currencyFormat.format(currentPortfolioValue)}', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Total Gain: ', style: Theme.of(context).textTheme.bodyMedium),
+                        Icon(isOverallPositive ? Icons.arrow_upward : Icons.arrow_downward, size: 16, color: isOverallPositive ? AppTheme.primary : AppTheme.error),
+                        Text(
+                          ' Rs. ${currencyFormat.format(overallGain.abs())} (${overallGainPct.toStringAsFixed(2)}%)',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(color: isOverallPositive ? AppTheme.primary : AppTheme.error, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Allocation Pie Chart
+              if (pieSections.isNotEmpty) ...[
+                Text('Asset Allocation', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 200,
+                  child: PieChart(
+                    PieChartData(
+                      sections: pieSections,
+                      centerSpaceRadius: 40,
+                      sectionsSpace: 2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+              Text('Holdings', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              ...listItems,
+            ],
           );
         },
       ),
@@ -340,6 +590,70 @@ class _MarketStatsTab extends StatelessWidget {
           Text('Market Stats & Insights', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
           const SizedBox(height: 8),
           Text('Real-time technical analysis and institutional flow.', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
+          const SizedBox(height: 24),
+          
+          // NEPSE Line Chart
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('NEPSE Index', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    const Text('2,154.32', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.primary)),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Sensitive: 410.15', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                    const Text('+15.42 (0.72%)', style: TextStyle(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  height: 180,
+                  child: LineChart(
+                    LineChartData(
+                      gridData: const FlGridData(show: false),
+                      titlesData: const FlTitlesData(show: false),
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: const [
+                            FlSpot(0, 2100),
+                            FlSpot(1, 2120),
+                            FlSpot(2, 2110),
+                            FlSpot(3, 2140),
+                            FlSpot(4, 2130),
+                            FlSpot(5, 2154),
+                          ],
+                          isCurved: true,
+                          color: AppTheme.primary,
+                          barWidth: 3,
+                          isStrokeCapRound: true,
+                          dotData: const FlDotData(show: false),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: AppTheme.primary.withOpacity(0.1),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 24),
           
           // Technicals Header
