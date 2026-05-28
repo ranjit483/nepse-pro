@@ -475,25 +475,42 @@ class _PortfolioTabState extends State<_PortfolioTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(symbol, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                            Expanded(
+                              child: Text(symbol, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                            ),
                             Text('NPR ${currencyFormat.format(currentValue)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: AppTheme.error),
+                              onPressed: () => _deleteSymbol(symbol),
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.only(left: 8),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('$qty Units | Avg: NPR ${currencyFormat.format(avgPrice)}', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
-                            Row(
-                              children: [
-                                Icon(isPositive ? Icons.arrow_upward : Icons.arrow_downward, size: 14, color: isPositive ? AppTheme.primary : AppTheme.error),
-                                Text(
-                                  ' ${currencyFormat.format(totalGain.abs())} (${totalGainPct.toStringAsFixed(2)}%)',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: isPositive ? AppTheme.primary : AppTheme.error, fontWeight: FontWeight.bold),
-                                ),
-                              ],
+                            Expanded(
+                              flex: 3,
+                              child: Text('$qty Units | Avg: NPR ${currencyFormat.format(avgPrice)}', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Icon(isPositive ? Icons.arrow_upward : Icons.arrow_downward, size: 14, color: isPositive ? AppTheme.primary : AppTheme.error),
+                                  Flexible(
+                                    child: Text(
+                                      ' ${currencyFormat.format(totalGain.abs())} (${totalGainPct.toStringAsFixed(2)}%)',
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: isPositive ? AppTheme.primary : AppTheme.error, fontWeight: FontWeight.bold),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
