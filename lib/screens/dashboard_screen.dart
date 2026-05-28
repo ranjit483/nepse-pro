@@ -348,11 +348,27 @@ class _PortfolioTabState extends State<_PortfolioTab> {
 
   Future<void> _deleteSymbol(String symbol) async {
     try {
-      await supabase.from('portfolio').delete().eq('symbol', symbol);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$symbol deleted from portfolio')));
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception('User not logged in');
+      
+      final response = await supabase.from('portfolio')
+          .delete()
+          .eq('symbol', symbol)
+          .eq('user_id', user.id)
+          .select();
+          
+      if (response.isEmpty) {
+        throw Exception('0 rows deleted. (Missing DELETE policy in Supabase RLS?)');
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$symbol deleted from portfolio')));
+      }
       _handleRefresh();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete: $e'), backgroundColor: AppTheme.error));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete: $e'), backgroundColor: AppTheme.error));
+      }
     }
   }
 
