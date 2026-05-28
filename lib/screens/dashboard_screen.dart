@@ -153,6 +153,8 @@ class _DashboardTabState extends State<_DashboardTab> {
                     return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
                   }
 
+          final data = snapshot.data ?? [];
+
           // Group by symbol
           Map<String, Map<String, dynamic>> groupedData = {};
           double totalInvested = 0;
