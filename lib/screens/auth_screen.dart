@@ -47,6 +47,7 @@ class _AuthScreenState extends State<AuthScreen> {
         await supabase.auth.signUp(
           email: _emailController.text.trim(),
           password: _passwordController.text,
+          emailRedirectTo: 'io.supabase.nepsepro://login-callback',
         );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

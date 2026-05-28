@@ -47,6 +47,21 @@ jobs:
           # Inject INTERNET permission into AndroidManifest.xml for release mode
           sed -i 's/<application/<uses-permission android:name="android.permission.INTERNET"\/>\n    <application/' android/app/src/main/AndroidManifest.xml
           
+          # Inject Deep Link Intent Filter for Supabase Email Verification
+          python -c "
+          with open('android/app/src/main/AndroidManifest.xml', 'r') as f: data = f.read()
+          intent_filter = '''
+            <intent-filter>
+                <action android:name=\"android.intent.action.VIEW\" />
+                <category android:name=\"android.intent.category.DEFAULT\" />
+                <category android:name=\"android.intent.category.BROWSABLE\" />
+                <data android:scheme=\"io.supabase.nepsepro\" android:host=\"login-callback\" />
+            </intent-filter>
+          '''
+          data = data.replace('</activity>', intent_filter + '</activity>')
+          with open('android/app/src/main/AndroidManifest.xml', 'w') as f: f.write(data)
+          "
+          
           flutter pub get
 
       - name: Build APK
